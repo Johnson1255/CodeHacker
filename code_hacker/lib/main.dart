@@ -36,6 +36,12 @@ class MyApp extends StatelessWidget {
           ),
         ),
         // You can add more theme customizations here
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
       ),
       initialRoute: '/',
       routes: {

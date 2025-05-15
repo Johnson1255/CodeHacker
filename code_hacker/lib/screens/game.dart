@@ -30,6 +30,8 @@ class _GameScreenState extends State<GameScreen> {
   ];
   int _sequenceLength = 3; // Initial sequence length
 
+import 'package:audioplayers/audioplayers.dart';
+
   // Decrypt Code Mini-game variables
   String _question = '';
   int _answer = 0;
@@ -42,6 +44,12 @@ class _GameScreenState extends State<GameScreen> {
     if (score > highscore) {
       await prefs.setInt('highscore', score);
     }
+  }
+
+  // Function to play sound
+  Future<void> _playSound(String soundAsset) async {
+    final player = AudioPlayer();
+    await player.play(AssetSource(soundAsset));
   }
 
   @override

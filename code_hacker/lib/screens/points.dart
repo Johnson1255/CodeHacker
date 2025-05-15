@@ -38,23 +38,27 @@ class _PointsScreenState extends State<PointsScreen> {
           children: [
             const Text(
               'Game Over!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.cyanAccent),
             ),
             const SizedBox(height: 20),
             Text(
               'Your Score: $score',
-              style: const TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 24, color: Colors.white70),
             ),
             const SizedBox(height: 10),
             Text(
               'High Score: $_highScore',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.cyanAccent),
             ),
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushReplacementNamed(context, '/home');
               },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
               child: const Text('Play Again'),
             ),
           ],
