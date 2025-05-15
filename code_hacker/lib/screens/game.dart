@@ -199,6 +199,7 @@ class _GameScreenState extends State<GameScreen> {
         });
       } else {
         // Game finished
+        _saveScore(_score); // Save the score
         Navigator.pushReplacementNamed(context, '/points', arguments: _score);
       }
     } else {

@@ -1,7 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class PointsScreen extends StatelessWidget {
+class PointsScreen extends StatefulWidget {
   const PointsScreen({super.key});
+
+  @override
+  State<PointsScreen> createState() => _PointsScreenState();
+}
+
+class _PointsScreenState extends State<PointsScreen> {
+  int _highScore = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHighScore();
+  }
+
+  Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _highScore = prefs.getInt('highscore') ?? 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +44,11 @@ class PointsScreen extends StatelessWidget {
             Text(
               'Your Score: $score',
               style: const TextStyle(fontSize: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'High Score: $_highScore',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             ElevatedButton(
