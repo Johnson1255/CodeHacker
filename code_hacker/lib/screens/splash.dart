@@ -42,10 +42,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           opacity: _animation,
           child: const Text(
             'Code Hacker',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 48, // Increased font size
+              fontWeight: FontWeight.bold,
+              color: Colors.cyanAccent, // Techy color
+            ),
           ),
         ),
       ),
+      backgroundColor: Colors.black, // Dark background
     );
   }
 }

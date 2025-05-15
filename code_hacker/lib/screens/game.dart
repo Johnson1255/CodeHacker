@@ -290,8 +290,14 @@ class _GameScreenState extends State<GameScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Level: $_currentLevel'),
-            Text('Score: $_score'),
+            Text(
+              'Level: $_currentLevel',
+              style: const TextStyle(fontSize: 20, color: Colors.white70),
+            ),
+            Text(
+              'Score: $_score',
+              style: const TextStyle(fontSize: 20, color: Colors.white70),
+            ),
             miniGameWidget, // Display the current mini-game widget
           ],
         ),
