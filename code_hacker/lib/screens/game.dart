@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:math';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -6,11 +8,6 @@ class GameScreen extends StatefulWidget {
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
-
-import 'dart:async';
-
-import 'dart:async';
-import 'dart:math';
 
 class _GameScreenState extends State<GameScreen> {
   int _currentLevel = 1;
@@ -33,6 +30,20 @@ class _GameScreenState extends State<GameScreen> {
   ];
   int _sequenceLength = 3; // Initial sequence length
 
+  // Decrypt Code Mini-game variables
+  String _question = '';
+  int _answer = 0;
+  final TextEditingController _answerController = TextEditingController();
+
+  // Shared Preferences for score
+  Future<void> _saveScore(int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    final highscore = prefs.getInt('highscore') ?? 0;
+    if (score > highscore) {
+      await prefs.setInt('highscore', score);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,10 +53,13 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _answerController.dispose();
     super.dispose();
   }
 
   void _startLevel() {
+    _timer?.cancel(); // Cancel any existing timer
+    _timeLeft = 10; // Reset timer for the level
     if (_currentLevel == 1) {
       _startFirewallBreak();
     } else if (_currentLevel == 2) {
@@ -53,24 +67,14 @@ class _GameScreenState extends State<GameScreen> {
     } else if (_currentLevel == 3) {
       _startDecryptCode();
     }
+    _startLevelTimer(); // Start the timer for the current level
   }
 
   // Firewall Break Logic
   void _startFirewallBreak() {
-    _timeLeft = 10;
     _progress = 0.0;
     _tapsMade = 0;
     _tapsNeeded = 10 + (_currentLevel - 1) * 5; // Increase taps needed per level
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_timeLeft > 0) {
-        setState(() {
-          _timeLeft--;
-        });
-      } else {
-        _timer?.cancel();
-        _endLevel(false); // Level failed
-      }
-    });
   }
 
   void _handleTap() {
@@ -88,6 +92,7 @@ class _GameScreenState extends State<GameScreen> {
 
   // Code Sequence Logic
   void _startCodeSequence() {
+    _sequenceLength = 3 + (_currentLevel - 2); // Increase sequence length per level
     _sequence = _generateSequence(_sequenceLength);
     _userInput = [];
     _isDisplayingSequence = true;
@@ -101,12 +106,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _displaySequence() async {
     await Future.delayed(const Duration(seconds: 1)); // Initial delay
-    for (Color color in _sequence) {
-      // TODO: Highlight the color in the UI
-      await Future.delayed(const Duration(milliseconds: 500)); // Display duration
-      // TODO: Unhighlight the color
-      await Future.delayed(const Duration(milliseconds: 250)); // Delay between colors
-    }
+    // TODO: Implement highlighting of colors in the UI during display
     setState(() {
       _isDisplayingSequence = false;
     });
@@ -136,21 +136,15 @@ class _GameScreenState extends State<GameScreen> {
     _endLevel(matches);
   }
 
-  // Decrypt Code Mini-game variables
-  String _question = '';
-  int _answer = 0;
-  final TextEditingController _answerController = TextEditingController();
-
   // Decrypt Code Logic
   void _startDecryptCode() {
     _generateMathQuestion();
-    _startLevelTimer(); // Start timer for the level
   }
 
   void _generateMathQuestion() {
     final random = Random();
-    int num1 = random.nextInt(10) + 1;
-    int num2 = random.nextInt(10) + 1;
+    int num1 = random.nextInt(10) + 1 + (_currentLevel - 3) * 5; // Increase difficulty
+    int num2 = random.nextInt(10) + 1 + (_currentLevel - 3) * 5; // Increase difficulty
     int operator = random.nextInt(3); // 0: +, 1: -, 2: *
 
     switch (operator) {
@@ -181,6 +175,19 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  void _startLevelTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_timeLeft > 0) {
+        setState(() {
+          _timeLeft--;
+        });
+      } else {
+        _timer?.cancel();
+        _endLevel(false); // Level failed
+      }
+    });
+  }
+
   void _endLevel(bool levelCompleted) {
     _timer?.cancel(); // Cancel any running timer
     if (levelCompleted) {
@@ -196,7 +203,6 @@ class _GameScreenState extends State<GameScreen> {
       }
     } else {
       // Level failed
-      // TODO: Implement logic for losing a life or restarting the level
       Navigator.pushReplacementNamed(context, '/points', arguments: _score); // Navigate to points screen on failure for now
     }
   }
