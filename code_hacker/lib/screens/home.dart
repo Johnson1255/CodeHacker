@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  // Function to play sound
+  Future<void> _playSound(String soundAsset) async {
+    final player = AudioPlayer();
+    await player.play(AssetSource(soundAsset));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: Text('Home Screen'),
+        title: const Text('Home Screen'),
       ),
       body: Center(
         child: Column(
@@ -24,6 +31,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
+                _playSound('sounds/button_click.mp3'); // Replace with your sound file
                 Navigator.pushNamed(context, '/game');
               },
               style: ElevatedButton.styleFrom(
@@ -35,6 +43,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
+                _playSound('sounds/button_click.mp3'); // Replace with your sound file
                 Navigator.pushNamed(context, '/credits');
               },
               style: ElevatedButton.styleFrom(

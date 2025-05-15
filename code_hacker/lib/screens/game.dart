@@ -86,6 +86,7 @@ import 'package:audioplayers/audioplayers.dart';
   }
 
   void _handleTap() {
+    _playSound('sounds/button_click.mp3');
     if (_timeLeft > 0) {
       setState(() {
         _tapsMade++;
@@ -122,6 +123,7 @@ import 'package:audioplayers/audioplayers.dart';
   }
 
   void _handleColorTap(Color color) {
+    _playSound('sounds/button_click.mp3');
     if (!_isDisplayingSequence && _timeLeft > 0) {
       setState(() {
         _userInput.add(color);
@@ -174,6 +176,7 @@ import 'package:audioplayers/audioplayers.dart';
   }
 
   void _checkAnswer() {
+    _playSound('sounds/button_click.mp3');
     int? userAnswer = int.tryParse(_answerController.text);
     if (userAnswer != null && userAnswer == _answer) {
       _timer?.cancel();
@@ -197,6 +200,7 @@ import 'package:audioplayers/audioplayers.dart';
   }
 
   void _endLevel(bool levelCompleted) {
+    _playSound(levelCompleted ? 'sounds/level_complete.mp3' : 'sounds/level_failed.mp3');
     _timer?.cancel(); // Cancel any running timer
     if (levelCompleted) {
       _score += 100; // Add score for completing the level
