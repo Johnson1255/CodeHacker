@@ -24,6 +24,7 @@ class _GameScreenState extends State<GameScreen> {
   List<Color> _sequence = [];
   List<Color> _userInput = [];
   bool _isDisplayingSequence = false;
+  Color? _highlightedColor;
   final List<Color> _availableColors = [
     Colors.red,
     Colors.green,
@@ -114,8 +115,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _displaySequence() async {
+    for (var color in _sequence) {
+      _highlightedColor = color;
+      await Future.delayed(const Duration(milliseconds: 500)); // Delay between color highlights
+      setState(() {}); // Trigger rebuild to show the highlighted color
+      _highlightedColor = null;
+    }
     await Future.delayed(const Duration(seconds: 1)); // Initial delay
-    // TODO: Implement highlighting of colors in the UI during display
     setState(() {
       _isDisplayingSequence = false;
     });
@@ -254,7 +260,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Container(
                   width: 50,
                   height: 50,
-                  color: color,
+                  color: color == _highlightedColor ? color.withOpacity(0.7) : color,
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                 ),
               );
