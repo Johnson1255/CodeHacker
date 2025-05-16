@@ -118,16 +118,20 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _displaySequence() async {
     for (var color in _sequence) {
       _highlightedColor = color;
-      await Future.delayed(const Duration(milliseconds: 500)); // Delay between color highlights
       setState(() {}); // Trigger rebuild to show the highlighted color
+      await Future.delayed(const Duration(milliseconds: 500)); // Delay between color highlights
       _highlightedColor = null;
+      setState(() {}); // Trigger rebuild to remove the highlight
+      await Future.delayed(const Duration(milliseconds: 200)); // Short delay before the next color
     }
-    await Future.delayed(const Duration(seconds: 1)); // Delay after sequence is displayed
-    setState(() {
-      _isDisplayingSequence = false;
-    });
-    _startLevelTimer(); // Start timer for user input
-  }
+      await Future.delayed(const Duration(seconds: 1)); // Delay after sequence is displayed
+      _timer?.cancel(); // Cancel the timer
+      setState(() {
+        _isDisplayingSequence = false;
+      });
+      await Future.delayed(const Duration(milliseconds: 500)); // Reduced delay
+      _startLevelTimer(); // Start timer for user input
+    }
 
   void _handleColorTap(Color color) {
     _playSound('sounds/button_click.mp3');
@@ -135,6 +139,12 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {
         _tappedColor = color; // Set the tapped color
         _userInput.add(color);
+      });
+      // Briefly highlight the tapped color
+      Future.delayed(const Duration(milliseconds: 200), () {
+        setState(() {
+          _tappedColor = null; // Reset the tapped color
+        });
       });
       if (_userInput.length == _sequence.length) {
         _timer?.cancel();
@@ -252,7 +262,17 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           const Text('Code Sequence Mini-game'),
           const SizedBox(height: 20),
-          Text(_isDisplayingSequence ? 'Watch the sequence!' : 'Repeat the sequence!'),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _isDisplayingSequence ? Colors.red[700] : Colors.green[700],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _isDisplayingSequence ? 'Watch the sequence!' : 'Repeat the sequence!',
+              style: TextStyle(fontSize: 24, color: _isDisplayingSequence ? Colors.white : Colors.white),
+            ),
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
