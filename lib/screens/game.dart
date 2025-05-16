@@ -25,6 +25,7 @@ class _GameScreenState extends State<GameScreen> {
   List<Color> _userInput = [];
   bool _isDisplayingSequence = false;
   Color? _highlightedColor;
+  Color? _tappedColor; // New variable to store the tapped color
   final List<Color> _availableColors = [
     Colors.red,
     Colors.green,
@@ -121,7 +122,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {}); // Trigger rebuild to show the highlighted color
       _highlightedColor = null;
     }
-    await Future.delayed(const Duration(seconds: 1)); // Initial delay
+    await Future.delayed(const Duration(seconds: 1)); // Delay after sequence is displayed
     setState(() {
       _isDisplayingSequence = false;
     });
@@ -132,6 +133,7 @@ class _GameScreenState extends State<GameScreen> {
     _playSound('sounds/button_click.mp3');
     if (!_isDisplayingSequence && _timeLeft > 0) {
       setState(() {
+        _tappedColor = color; // Set the tapped color
         _userInput.add(color);
       });
       if (_userInput.length == _sequence.length) {
@@ -260,7 +262,9 @@ class _GameScreenState extends State<GameScreen> {
                 child: Container(
                   width: 50,
                   height: 50,
-                  color: color == _highlightedColor ? color.withOpacity(0.7) : color,
+                  color: color == _highlightedColor
+                      ? color.withOpacity(0.7)
+                      : (color == _tappedColor ? color.withOpacity(0.7) : color), // Change color if tapped
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                 ),
               );
