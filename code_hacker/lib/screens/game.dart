@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -29,8 +31,6 @@ class _GameScreenState extends State<GameScreen> {
     Colors.yellow,
   ];
   int _sequenceLength = 3; // Initial sequence length
-
-import 'package:audioplayers/audioplayers.dart';
 
   // Decrypt Code Mini-game variables
   String _question = '';
