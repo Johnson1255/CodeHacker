@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:code_hacker/widgets/custom_button.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -11,7 +12,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   int _currentLevel = 1;
   int _score = 0;
   int _timeLeft = 10; // Timer for the mini-game
@@ -19,6 +20,10 @@ class _GameScreenState extends State<GameScreen> {
   int _tapsNeeded = 10; // Number of taps needed for the first level
   int _tapsMade = 0;
   Timer? _timer;
+
+  // Animación para el contador de tiempo
+  late AnimationController _timeAnimationController;
+  late Animation<double> _timeAnimation;
 
   // Code Sequence Mini-game variables
   List<Color> _sequence = [];
@@ -39,6 +44,27 @@ class _GameScreenState extends State<GameScreen> {
   int _answer = 0;
   final TextEditingController _answerController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _timeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _timeAnimation = Tween<double>(begin: 1.0, end: 0.8).animate(
+      CurvedAnimation(parent: _timeAnimationController, curve: Curves.easeInOut),
+    );
+    _startLevel();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _answerController.dispose();
+    _timeAnimationController.dispose();
+    super.dispose();
+  }
+
   // Shared Preferences for score
   Future<void> _saveScore(int score) async {
     final prefs = await SharedPreferences.getInstance();
@@ -52,19 +78,6 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _playSound(String soundAsset) async {
     final player = AudioPlayer();
     await player.play(AssetSource(soundAsset));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _startLevel();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _answerController.dispose();
-    super.dispose();
   }
 
   void _startLevel() {
@@ -209,6 +222,11 @@ class _GameScreenState extends State<GameScreen> {
       if (_timeLeft > 0) {
         setState(() {
           _timeLeft--;
+          if (_timeLeft <= 3) {
+            _timeAnimationController.forward().then((_) {
+              _timeAnimationController.reverse();
+            });
+          }
         });
       } else {
         _timer?.cancel();
@@ -238,6 +256,19 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  String _getLevelName() {
+    switch (_currentLevel) {
+      case 1:
+        return 'ROMPER FIREWALL';
+      case 2:
+        return 'SECUENCIA DE CÓDIGO';
+      case 3:
+        return 'DESCIFRAR CÓDIGO';
+      default:
+        return 'NIVEL $_currentLevel';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget miniGameWidget;
@@ -245,14 +276,62 @@ class _GameScreenState extends State<GameScreen> {
       miniGameWidget = Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 20),
+          Text(
+            'Toca rápidamente para romper el firewall',
+            style: TextStyle(color: Colors.white70),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 30),
+          Container(
+            width: double.infinity,
+            height: 20,
+            margin: const EdgeInsets.symmetric(horizontal: 30),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.cyanAccent, width: 1),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: _progress,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
+              ),
+            ),
+          ),
           const SizedBox(height: 40),
-          Text('Time Left: $_timeLeft s'), // Display timer
-          const SizedBox(height: 20),
-          LinearProgressIndicator(value: _progress), // Display progress
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _handleTap, // Call tap handler
-            child: const Text('Tap to Break Firewall'),
+          GestureDetector(
+            onTap: _handleTap,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.blueGrey.shade800,
+                border: Border.all(color: Colors.cyanAccent, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.touch_app,
+                  color: Colors.cyanAccent,
+                  size: 60,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+          Text(
+            'Taps: $_tapsMade / $_tapsNeeded',
+            style: const TextStyle(color: Colors.white70, fontSize: 18),
           ),
         ],
       );
@@ -260,88 +339,277 @@ class _GameScreenState extends State<GameScreen> {
       miniGameWidget = Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Code Sequence Mini-game'),
           const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
             decoration: BoxDecoration(
-              color: _isDisplayingSequence ? Colors.red[700] : Colors.green[700],
+              color: _isDisplayingSequence ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _isDisplayingSequence ? Colors.red : Colors.green,
+                width: 2,
+              ),
             ),
             child: Text(
-              _isDisplayingSequence ? 'Watch the sequence!' : 'Repeat the sequence!',
-              style: TextStyle(fontSize: 24, color: _isDisplayingSequence ? Colors.white : Colors.white),
+              _isDisplayingSequence ? 'OBSERVA LA SECUENCIA' : 'REPITE LA SECUENCIA',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _isDisplayingSequence ? Colors.red : Colors.green,
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(height: 30),
+          Container(
+            width: 280,
+            height: 70,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(_sequence.length, (index) {
+                return Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index < _userInput.length ? _userInput[index] : Colors.blueGrey.shade800,
+                    border: Border.all(
+                      color: Colors.white30,
+                      width: 1,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 30),
+          Wrap(
+            spacing: 15,
+            runSpacing: 15,
+            alignment: WrapAlignment.center,
             children: _availableColors.map((color) {
+              bool isHighlighted = color == _highlightedColor || color == _tappedColor;
               return GestureDetector(
                 onTap: () => _handleColorTap(color),
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  color: color == _highlightedColor
-                      ? color.withOpacity(0.7)
-                      : (color == _tappedColor ? color.withOpacity(0.7) : color), // Change color if tapped
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isHighlighted ? Colors.white : Colors.transparent,
+                      width: 3,
+                    ),
+                    boxShadow: isHighlighted
+                        ? [
+                            BoxShadow(
+                              color: color.withOpacity(0.7),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : [],
+                  ),
                 ),
               );
             }).toList(),
           ),
-          const SizedBox(height: 20),
-          Text('Time Left: $_timeLeft s'), // Display timer for user input
         ],
       );
     } else {
       miniGameWidget = Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Decrypt Code Mini-game'),
             const SizedBox(height: 20),
-            Text(_question, style: const TextStyle(fontSize: 20)),
+            const Text(
+              'Resuelve la ecuación:',
+              style: TextStyle(color: Colors.white70),
+            ),
             const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.cyanAccent),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Text(
+                _question,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.cyanAccent,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
             TextField(
               controller: _answerController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Enter your answer',
-                border: OutlineInputBorder(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Tu respuesta',
+                labelStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.cyanAccent),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.5)),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
+            const SizedBox(height: 30),
+            HackerButton(
+              text: 'ENVIAR RESPUESTA',
+              icon: Icons.send,
               onPressed: _checkAnswer,
-              child: const Text('Submit Answer'),
+              playSound: false,
             ),
-            const SizedBox(height: 20),
-            Text('Time Left: $_timeLeft s'), // Display timer for user input
           ],
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Game Screen'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Level: $_currentLevel',
-              style: const TextStyle(fontSize: 20, color: Colors.white70),
-            ),
-            Text(
-              'Score: $_score',
-              style: const TextStyle(fontSize: 20, color: Colors.white70),
-            ),
-            miniGameWidget, // Display the current mini-game widget
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Colors.blueGrey.shade900],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'NIVEL $_currentLevel',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        Text(
+                          _getLevelName(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyanAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.cyanAccent, size: 16),
+                          const SizedBox(width: 5),
+                          Text(
+                            '$_score',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    const Icon(Icons.timer, color: Colors.white70, size: 16),
+                    const SizedBox(width: 5),
+                    const Text(
+                      'Tiempo:',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: LinearProgressIndicator(
+                          value: _timeLeft / 10,
+                          backgroundColor: Colors.blueGrey.shade800,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ScaleTransition(
+                      scale: _timeAnimation,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$_timeLeft',
+                            style: TextStyle(
+                              color: _timeLeft <= 3 ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.blueGrey, height: 30),
+              Expanded(
+                child: Center(
+                  child: miniGameWidget,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
