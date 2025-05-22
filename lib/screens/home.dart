@@ -1,59 +1,78 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:code_hacker/widgets/custom_button.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  // Function to play sound
-  Future<void> _playSound(String soundAsset) async {
-    final player = AudioPlayer();
-    await player.play(AssetSource(soundAsset));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Screen'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'Code Hacker',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: Colors.cyanAccent,
-              ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Colors.blueGrey.shade900],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Spacer(),
+                Center(
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.security,
+                        color: Colors.cyanAccent,
+                        size: 80,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'CODE HACKER',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.cyanAccent,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'BREAK THE FIREWALL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.cyanAccent.withOpacity(0.7),
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                HackerButton(
+                  text: 'INICIAR MISIÓN',
+                  icon: Icons.play_arrow,
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/game');
+                  },
+                ),
+                const SizedBox(height: 15),
+                HackerButton(
+                  text: 'CRÉDITOS',
+                  icon: Icons.info_outline,
+                  isOutlined: true,
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/credits');
+                  },
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () {
-                _playSound('sounds/button_click.mp3'); // Replace with your sound file
-                Navigator.pushNamed(context, '/game');
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text('Start Game'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                _playSound('sounds/button_click.mp3'); // Replace with your sound file
-                Navigator.pushNamed(context, '/credits');
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text('Credits'),
-            ),
-          ],
+          ),
         ),
       ),
     );
