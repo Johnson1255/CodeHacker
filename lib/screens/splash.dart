@@ -10,7 +10,10 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  int _tapCount = 0;
+  bool _easterEggActivated = false;
 
   @override
   void initState() {
@@ -19,12 +22,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    );
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    ));
 
     _controller.forward();
 
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/home');
+      if (!_easterEggActivated) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     });
   }
 
@@ -34,23 +51,120 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
+  void _handleLogoTap() {
+    setState(() {
+      _tapCount++;
+      if (_tapCount >= 5 && !_easterEggActivated) {
+        _easterEggActivated = true;
+        _showEasterEgg();
+      }
+    });
+  }
+
+  void _showEasterEgg() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: const Text(
+          '¡MODO HACKER ACTIVADO!',
+          style: TextStyle(color: Colors.red),
+          textAlign: TextAlign.center,
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
+            SizedBox(height: 10),
+            Text(
+              'Has descubierto el modo secreto.\nEstas Preparado?.',
+              style: TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.pushReplacementNamed(context, '/home');
+            },
+            child: const Text('CONTINUAR', style: TextStyle(color: Colors.cyanAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: FadeTransition(
-          opacity: _animation,
-          child: const Text(
-            'Code Hacker',
-            style: TextStyle(
-              fontSize: 48, // Increased font size
-              fontWeight: FontWeight.bold,
-              color: Colors.cyanAccent, // Techy color
-            ),
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.0,
+            colors: [Colors.blueGrey.shade900, Colors.black],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              GestureDetector(
+                onTap: _handleLogoTap,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.security,
+                          color: Colors.cyanAccent,
+                          size: 80,
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'CODE HACKER',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyanAccent,
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'INICIANDO SISTEMA...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.cyanAccent.withOpacity(0.7),
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.blueGrey.shade900,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
+                ),
+              ),
+              const SizedBox(height: 50),
+            ],
           ),
         ),
       ),
-      backgroundColor: Colors.black, // Dark background
     );
   }
 }
