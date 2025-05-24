@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:code_hacker/widgets/custom_button.dart';
 import 'package:code_hacker/widgets/score_card.dart';
 import 'package:code_hacker/models/score_model.dart';
+import 'dart:convert';
 
 class PointsScreen extends StatefulWidget {
   const PointsScreen({super.key});
@@ -13,9 +14,11 @@ class PointsScreen extends StatefulWidget {
 
 class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderStateMixin {
   int _highScore = 0;
+  int _maxCycle = 0;
   late AnimationController _controller;
   late Animation<double> _scoreAnimation;
   bool _isNewHighScore = false;
+  bool _isNewMaxCycle = false;
 
   @override
   void initState() {
@@ -39,31 +42,77 @@ class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderSt
 
   Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
-    final score = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+    final score = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {'score': 0, 'cycle': 1};
+    
     final oldHighScore = prefs.getInt('highscore') ?? 0;
+    final oldMaxCycle = prefs.getInt('maxcycle') ?? 0;
+    
+    final int currentScore = score['score'] as int;
+    final int currentCycle = score['cycle'] as int;
     
     setState(() {
       _highScore = prefs.getInt('highscore') ?? 0;
-      _isNewHighScore = score > oldHighScore;
+      _maxCycle = prefs.getInt('maxcycle') ?? 0;
+      _isNewHighScore = currentScore > oldHighScore;
+      _isNewMaxCycle = currentCycle > oldMaxCycle;
     });
 
-    // Guardar la puntuación actual con fecha y nivel
-    if (score > 0) {
+    // Actualizar récords si es necesario
+    if (currentScore > oldHighScore) {
+      await prefs.setInt('highscore', currentScore);
+    }
+    
+    if (currentCycle > oldMaxCycle) {
+      await prefs.setInt('maxcycle', currentCycle);
+    }
+
+    // Guardar la puntuación actual con fecha, nivel y ciclo
+    if (currentScore > 0) {
       final newScore = Score(
-        points: score,
-        level: 3, // Asumimos que completó todos los niveles
+        points: currentScore,
+        level: score['level'] as int,
+        cycle: currentCycle,
         timestamp: DateTime.now(),
       );
       
-      final scores = prefs.getStringList('scores') ?? [];
-      scores.add(newScore.toString());
-      await prefs.setStringList('scores', scores);
+      // Guardar historial de puntuaciones (últimas 10)
+      List<Score> scores = [];
+      final scoresJson = prefs.getStringList('scores_history') ?? [];
+      
+      // Convertir las puntuaciones guardadas a objetos Score
+      if (scoresJson.isNotEmpty) {
+        scores = scoresJson.map((scoreStr) => 
+          Score.fromJson(jsonDecode(scoreStr) as Map<String, dynamic>)
+        ).toList();
+      }
+      
+      // Añadir la nueva puntuación
+      scores.add(newScore);
+      
+      // Ordenar por puntuación (mayor primero)
+      scores.sort((a, b) => b.points.compareTo(a.points));
+      
+      // Mantener solo las 10 mejores
+      if (scores.length > 10) {
+        scores = scores.sublist(0, 10);
+      }
+      
+      // Guardar como JSON
+      final updatedScoresJson = scores.map((score) => 
+        jsonEncode(score.toJson())
+      ).toList();
+      
+      await prefs.setStringList('scores_history', updatedScoresJson);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final score = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+    final scoreData = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? 
+      {'score': 0, 'cycle': 1, 'level': 1};
+    
+    final score = scoreData['score'] as int;
+    final cycle = scoreData['cycle'] as int;
 
     return Scaffold(
       body: Container(
@@ -95,15 +144,15 @@ class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderSt
                 const SizedBox(height: 10),
                 Center(
                   child: Text(
-                    _isNewHighScore ? '¡NUEVO RÉCORD!' : 'PUNTUACIÓN FINAL',
+                    _isNewHighScore || _isNewMaxCycle ? '¡NUEVO RÉCORD!' : 'PUNTUACIÓN FINAL',
                     style: TextStyle(
                       fontSize: 16,
-                      color: _isNewHighScore ? Colors.cyanAccent : Colors.white70,
+                      color: _isNewHighScore || _isNewMaxCycle ? Colors.cyanAccent : Colors.white70,
                       letterSpacing: 1.5,
                     ),
                   ),
                 ),
-                const Spacer(),
+                const Spacer(flex: 1),
                 ScaleTransition(
                   scale: _scoreAnimation,
                   child: ScoreCard(
@@ -115,11 +164,109 @@ class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderSt
                 const SizedBox(height: 20),
                 ScoreCard(
                   score: _highScore,
-                  label: 'Récord',
-                  isHighScore: true,
+                  label: 'Récord de Puntos',
+                  isHighScore: _isNewHighScore,
                   icon: Icons.emoji_events,
                 ),
-                const Spacer(),
+                const SizedBox(height: 20),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _isNewMaxCycle ? Colors.blueGrey.shade900 : Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isNewMaxCycle ? Colors.cyanAccent : Colors.blueGrey,
+                      width: 2,
+                    ),
+                    boxShadow: _isNewMaxCycle
+                        ? [
+                            BoxShadow(
+                              color: Colors.cyanAccent.withOpacity(0.3),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.loop,
+                        color: _isNewMaxCycle ? Colors.cyanAccent : Colors.white70,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CICLO ALCANZADO',
+                              style: TextStyle(
+                                color: _isNewMaxCycle ? Colors.cyanAccent : Colors.white70,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  cycle.toString(),
+                                  style: TextStyle(
+                                    color: _isNewMaxCycle ? Colors.cyanAccent : Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                if (cycle > 1)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'DIFICULTAD x$cycle',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black,
+                          border: Border.all(
+                            color: _isNewMaxCycle ? Colors.cyanAccent : Colors.transparent,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'MAX\n$_maxCycle',
+                          style: TextStyle(
+                            color: _isNewMaxCycle ? Colors.cyanAccent : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(flex: 2),
                 HackerButton(
                   text: 'VOLVER A JUGAR',
                   icon: Icons.replay,

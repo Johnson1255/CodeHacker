@@ -20,10 +20,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   int _tapsNeeded = 10; // Number of taps needed for the first level
   int _tapsMade = 0;
   Timer? _timer;
+  int _currentCycle = 1; // Contador de ciclos completados
+  bool _showLevelUpMessage = false; // Para mostrar mensaje de subida de nivel
+  String _levelUpMessage = ''; // Mensaje de subida de nivel
 
   // Animación para el contador de tiempo
   late AnimationController _timeAnimationController;
   late Animation<double> _timeAnimation;
+  
+  // Animación para el mensaje de subida de nivel
+  late AnimationController _levelUpAnimationController;
+  late Animation<double> _levelUpAnimation;
 
   // Code Sequence Mini-game variables
   List<Color> _sequence = [];
@@ -54,6 +61,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _timeAnimation = Tween<double>(begin: 1.0, end: 0.8).animate(
       CurvedAnimation(parent: _timeAnimationController, curve: Curves.easeInOut),
     );
+    
+    _levelUpAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _levelUpAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _levelUpAnimationController, curve: Curves.elasticOut),
+    );
+    
     _startLevel();
   }
 
@@ -62,6 +78,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _timer?.cancel();
     _answerController.dispose();
     _timeAnimationController.dispose();
+    _levelUpAnimationController.dispose();
     super.dispose();
   }
 
@@ -82,7 +99,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _startLevel() {
     _timer?.cancel(); // Cancel any existing timer
-    _timeLeft = 10; // Reset timer for the level
+    
+    // Ajustar tiempo según el ciclo (más difícil con cada ciclo)
+    _timeLeft = max(5, 10 - (_currentCycle - 1)); // Mínimo 5 segundos
+    
     if (_currentLevel == 1) {
       _startFirewallBreak();
     } else if (_currentLevel == 2) {
@@ -97,7 +117,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _startFirewallBreak() {
     _progress = 0.0;
     _tapsMade = 0;
-    _tapsNeeded = 10 + (_currentLevel - 1) * 5; // Increase taps needed per level
+    // Aumentar la dificultad con cada ciclo
+    _tapsNeeded = 10 + (_currentLevel - 1) * 5 + (_currentCycle - 1) * 3;
   }
 
   void _handleTap() {
@@ -116,7 +137,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Code Sequence Logic
   void _startCodeSequence() {
-    _sequenceLength = 3 + (_currentLevel - 2); // Increase sequence length per level
+    // Aumentar la longitud de la secuencia con cada ciclo
+    _sequenceLength = 3 + (_currentLevel - 2) + (_currentCycle - 1);
     _sequence = _generateSequence(_sequenceLength);
     _userInput = [];
     _isDisplayingSequence = true;
@@ -132,7 +154,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     for (var color in _sequence) {
       _highlightedColor = color;
       setState(() {}); // Trigger rebuild to show the highlighted color
-      await Future.delayed(const Duration(milliseconds: 500)); // Delay between color highlights
+      // Reducir el tiempo de visualización con cada ciclo para aumentar dificultad
+      int displayTime = max(200, 500 - (_currentCycle - 1) * 50);
+      await Future.delayed(Duration(milliseconds: displayTime));
       _highlightedColor = null;
       setState(() {}); // Trigger rebuild to remove the highlight
       await Future.delayed(const Duration(milliseconds: 200)); // Short delay before the next color
@@ -184,9 +208,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _generateMathQuestion() {
     final random = Random();
-    int num1 = random.nextInt(10) + 1 + (_currentLevel - 3) * 5; // Increase difficulty
-    int num2 = random.nextInt(10) + 1 + (_currentLevel - 3) * 5; // Increase difficulty
-    int operator = random.nextInt(3); // 0: +, 1: -, 2: *
+    // Aumentar la dificultad con cada ciclo
+    int difficulty = (_currentLevel - 3) * 5 + (_currentCycle - 1) * 3;
+    int num1 = random.nextInt(10) + 1 + difficulty;
+    int num2 = random.nextInt(10) + 1 + difficulty;
+    
+    // Con ciclos más altos, introducir operaciones más complejas
+    int maxOperator = _currentCycle > 2 ? 3 : 2; // Incluir división en ciclos avanzados
+    int operator = random.nextInt(maxOperator);
 
     switch (operator) {
       case 0:
@@ -194,12 +223,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _answer = num1 + num2;
         break;
       case 1:
+        // Asegurar que la resta no sea negativa
+        if (num1 < num2) {
+          int temp = num1;
+          num1 = num2;
+          num2 = temp;
+        }
         _question = '$num1 - $num2 = ?';
         _answer = num1 - num2;
         break;
       case 2:
-        _question = '$num1 * $num2 = ?';
+        _question = '$num1 × $num2 = ?';
         _answer = num1 * num2;
+        break;
+      case 3:
+        // Asegurar que la división sea exacta
+        int result = num1 * num2;
+        _question = '$result ÷ $num1 = ?';
+        _answer = num2;
         break;
     }
     _answerController.clear();
@@ -235,24 +276,58 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _showCycleCompletedMessage() {
+    setState(() {
+      _showLevelUpMessage = true;
+      _levelUpMessage = '¡CICLO $_currentCycle COMPLETADO!';
+    });
+    
+    _levelUpAnimationController.forward().then((_) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _showLevelUpMessage = false;
+          });
+          _levelUpAnimationController.reset();
+          _startLevel(); // Iniciar el siguiente nivel
+        }
+      });
+    });
+  }
+
   void _endLevel(bool levelCompleted) {
     _playSound(levelCompleted ? 'sounds/level_complete.mp3' : 'sounds/level_failed.mp3');
     _timer?.cancel(); // Cancel any running timer
     if (levelCompleted) {
-      _score += 100; // Add score for completing the level
+      // Puntuación base por nivel + bonificación por ciclo
+      int levelPoints = 100 * _currentCycle;
+      _score += levelPoints;
+      
       if (_currentLevel < 3) {
         setState(() {
           _currentLevel++;
           _startLevel(); // Start the next level
         });
       } else {
-        // Game finished
-        _saveScore(_score); // Save the score
-        Navigator.pushReplacementNamed(context, '/points', arguments: _score);
+        // Ciclo completado
+        setState(() {
+          _currentLevel = 1; // Reiniciar al nivel 1
+          _currentCycle++; // Incrementar el contador de ciclos
+        });
+        _showCycleCompletedMessage();
       }
     } else {
-      // Level failed
-      Navigator.pushReplacementNamed(context, '/points', arguments: _score); // Navigate to points screen on failure for now
+      // Game over - Level failed
+      _saveScore(_score); // Save the score
+      Navigator.pushReplacementNamed(
+        context, 
+        '/points', 
+        arguments: {
+          'score': _score,
+          'cycle': _currentCycle,
+          'level': _currentLevel,
+        },
+      );
     }
   }
 
@@ -494,123 +569,212 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.black, Colors.blueGrey.shade900],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black, Colors.blueGrey.shade900],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'NIVEL $_currentLevel',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'NIVEL $_currentLevel',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.red.withOpacity(0.7)),
+                                  ),
+                                  child: Text(
+                                    'CICLO $_currentCycle',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              _getLevelName(),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.cyanAccent,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          _getLevelName(),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.cyanAccent,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.cyanAccent, size: 16),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$_score',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer, color: Colors.white70, size: 16),
+                        const SizedBox(width: 5),
+                        const Text(
+                          'Tiempo:',
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: LinearProgressIndicator(
+                              value: _timeLeft / 10,
+                              backgroundColor: Colors.blueGrey.shade800,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ScaleTransition(
+                          scale: _timeAnimation,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$_timeLeft',
+                                style: TextStyle(
+                                  color: _timeLeft <= 3 ? Colors.white : Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Colors.blueGrey, height: 30),
+                  Expanded(
+                    child: Center(
+                      child: miniGameWidget,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showLevelUpMessage)
+            Positioned.fill(
+              child: ScaleTransition(
+                scale: _levelUpAnimation,
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Colors.cyanAccent, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.cyanAccent.withOpacity(0.5),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
                       ),
-                      child: Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star, color: Colors.cyanAccent, size: 16),
-                          const SizedBox(width: 5),
+                          const Icon(
+                            Icons.arrow_circle_up,
+                            color: Colors.cyanAccent,
+                            size: 50,
+                          ),
+                          const SizedBox(height: 20),
                           Text(
-                            '$_score',
+                            _levelUpMessage,
                             style: const TextStyle(
+                              color: Colors.cyanAccent,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Dificultad aumentada',
+                            style: TextStyle(
+                              color: Colors.red,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Puntuación: $_score',
+                            style: const TextStyle(
                               color: Colors.white,
+                              fontSize: 18,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer, color: Colors.white70, size: 16),
-                    const SizedBox(width: 5),
-                    const Text(
-                      'Tiempo:',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: LinearProgressIndicator(
-                          value: _timeLeft / 10,
-                          backgroundColor: Colors.blueGrey.shade800,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ScaleTransition(
-                      scale: _timeAnimation,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$_timeLeft',
-                            style: TextStyle(
-                              color: _timeLeft <= 3 ? Colors.white : Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.blueGrey, height: 30),
-              Expanded(
-                child: Center(
-                  child: miniGameWidget,
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
