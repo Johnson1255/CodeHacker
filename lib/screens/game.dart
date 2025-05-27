@@ -50,6 +50,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   int _answer = 0;
   List<int> _answerOptions = []; // Lista de opciones para elegir
 
+  // Password Hack Mini-game variables
+  String _targetPassword = '';
+  List<String> _selectedCharacters = [];
+  int _passwordLength = 4; // Longitud inicial de la contraseña
+  final List<String> _availableCharacters = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'A', 'B', 'C', 'D', 'E', 'F', '#', '@', '%', '&'
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -110,6 +119,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     } else if (_currentLevel == 3) {
       _startDecryptCode();
       _startLevelTimer(); // Iniciar temporizador inmediatamente para nivel 3
+    } else if (_currentLevel == 4) {
+      _startPasswordHack();
+      _startLevelTimer(); // Iniciar temporizador inmediatamente para nivel 4
     }
   }
 
@@ -330,6 +342,75 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
+  // Password Hack Logic
+  void _startPasswordHack() {
+    // Aumentar la dificultad con cada ciclo
+    _passwordLength = 4 + (_currentCycle - 1);
+    _generateTargetPassword();
+    _selectedCharacters = List.filled(_passwordLength, '');
+  }
+  
+  void _generateTargetPassword() {
+    final random = Random();
+    _targetPassword = '';
+    
+    // Generar una contraseña aleatoria con la longitud determinada
+    for (int i = 0; i < _passwordLength; i++) {
+      _targetPassword += _availableCharacters[random.nextInt(_availableCharacters.length)];
+    }
+    
+    setState(() {});
+  }
+  
+  void _handleCharacterSelection(int position, String character) {
+    _playSound('sounds/button_click.mp3');
+    
+    setState(() {
+      _selectedCharacters[position] = character;
+    });
+    
+    // Verificar si se ha completado la contraseña
+    bool isComplete = !_selectedCharacters.contains('');
+    if (isComplete) {
+      _checkPassword();
+    }
+  }
+  
+  void _checkPassword() {
+    String attemptedPassword = _selectedCharacters.join();
+    
+    if (attemptedPassword == _targetPassword) {
+      _timer?.cancel();
+      _endLevel(true); // Level completed
+    } else {
+      // Dar retroalimentación visual sobre qué caracteres son correctos
+      List<bool> correctPositions = List.generate(_passwordLength, (index) => 
+        index < _targetPassword.length && 
+        index < attemptedPassword.length && 
+        _targetPassword[index] == attemptedPassword[index]
+      );
+      
+      // Mostrar cuántos caracteres están en posición correcta
+      int correctCount = correctPositions.where((isCorrect) => isCorrect).length;
+      
+      setState(() {
+        _selectedCharacters = List.filled(_passwordLength, '');
+      });
+      
+      // Mostrar pistas visuales brevemente
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Contraseña incorrecta. $correctCount/${_passwordLength} caracteres correctos.',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red.shade900,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   void _endLevel(bool levelCompleted) {
     _playSound(levelCompleted ? 'sounds/level_complete.mp3' : 'sounds/level_failed.mp3');
     _timer?.cancel(); // Cancel any running timer
@@ -338,7 +419,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       int levelPoints = 100 * _currentCycle;
       _score += levelPoints;
       
-      if (_currentLevel < 3) {
+      if (_currentLevel < 4) {
         setState(() {
           _currentLevel++;
           _startLevel(); // Start the next level
@@ -374,6 +455,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         return 'SECUENCIA DE CÓDIGO';
       case 3:
         return 'DESCIFRAR CÓDIGO';
+      case 4:
+        return 'HACKEAR CONTRASEÑA';
       default:
         return 'NIVEL $_currentLevel';
     }
@@ -533,7 +616,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         ],
       );
-    } else {
+    } else if (_currentLevel == 3) {
       miniGameWidget = Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
@@ -605,6 +688,152 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 );
               }).toList(),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Nivel 4: Hackear Contraseña
+      miniGameWidget = Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            const Text(
+              'Hackea la contraseña:',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.cyanAccent),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'ACCESO RESTRINGIDO',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_passwordLength, (index) {
+                      return Container(
+                        width: 40,
+                        height: 50,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: Colors.cyanAccent.withOpacity(0.7)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _selectedCharacters[index],
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.cyanAccent,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: _availableCharacters.map((char) {
+                return GestureDetector(
+                  onTap: () {
+                    // Encontrar la primera posición vacía
+                    int emptyPosition = _selectedCharacters.indexOf('');
+                    if (emptyPosition != -1) {
+                      _handleCharacterSelection(emptyPosition, char);
+                    }
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.shade900,
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: Colors.cyanAccent.withOpacity(0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 3,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        char,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.cyanAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCharacters = List.filled(_passwordLength, '');
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.red.withOpacity(0.7)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, color: Colors.red, size: 16),
+                    SizedBox(width: 5),
+                    Text(
+                      'REINICIAR',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
