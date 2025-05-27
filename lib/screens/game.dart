@@ -103,12 +103,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     
     if (_currentLevel == 1) {
       _startFirewallBreak();
+      _startLevelTimer(); // Iniciar temporizador inmediatamente para nivel 1
     } else if (_currentLevel == 2) {
       _startCodeSequence();
+      // Para el nivel 2, el temporizador se iniciará después de mostrar la secuencia
     } else if (_currentLevel == 3) {
       _startDecryptCode();
+      _startLevelTimer(); // Iniciar temporizador inmediatamente para nivel 3
     }
-    _startLevelTimer(); // Start the timer for the current level
   }
 
   // Firewall Break Logic
@@ -149,6 +151,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _displaySequence() async {
+    // Asegurar que no haya temporizador activo durante la visualización
+    _timer?.cancel();
+    
     for (var color in _sequence) {
       _highlightedColor = color;
       setState(() {}); // Trigger rebuild to show the highlighted color
@@ -159,14 +164,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       setState(() {}); // Trigger rebuild to remove the highlight
       await Future.delayed(const Duration(milliseconds: 200)); // Short delay before the next color
     }
-      await Future.delayed(const Duration(seconds: 1)); // Delay after sequence is displayed
-      _timer?.cancel(); // Cancel the timer
-      setState(() {
-        _isDisplayingSequence = false;
-      });
-      await Future.delayed(const Duration(milliseconds: 500)); // Reduced delay
-      _startLevelTimer(); // Start timer for user input
-    }
+    
+    await Future.delayed(const Duration(seconds: 1)); // Delay after sequence is displayed
+    
+    setState(() {
+      _isDisplayingSequence = false;
+      // Reiniciar el tiempo al valor completo después de mostrar la secuencia
+      _timeLeft = max(5, 10 - (_currentCycle - 1));
+    });
+    
+    await Future.delayed(const Duration(milliseconds: 500)); // Reduced delay
+    
+    // Iniciar el temporizador solo después de que se haya mostrado la secuencia
+    _startLevelTimer();
+  }
 
   void _handleColorTap(Color color) {
     _playSound('sounds/button_click.mp3');
