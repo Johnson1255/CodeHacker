@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:code_hacker/widgets/custom_button.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -49,7 +48,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Decrypt Code Mini-game variables
   String _question = '';
   int _answer = 0;
-  final TextEditingController _answerController = TextEditingController();
+  List<int> _answerOptions = []; // Lista de opciones para elegir
 
   @override
   void initState() {
@@ -76,7 +75,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _timer?.cancel();
-    _answerController.dispose();
     _timeAnimationController.dispose();
     _levelUpAnimationController.dispose();
     super.dispose();
@@ -204,6 +202,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Decrypt Code Logic
   void _startDecryptCode() {
     _generateMathQuestion();
+    _generateAnswerOptions(); // Generar opciones de respuesta
   }
 
   void _generateMathQuestion() {
@@ -243,14 +242,39 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _answer = num2;
         break;
     }
-    _answerController.clear();
     setState(() {});
   }
 
-  void _checkAnswer() {
+  void _generateAnswerOptions() {
+    final random = Random();
+    _answerOptions = [];
+    
+    // Agregar la respuesta correcta
+    _answerOptions.add(_answer);
+    
+    // Generar opciones incorrectas pero cercanas a la respuesta correcta
+    while (_answerOptions.length < 4) {
+      // Calculamos opciones cercanas a la respuesta correcta
+      int offset = random.nextInt(10) + 1;
+      if (random.nextBool()) offset = -offset;
+      
+      int option = _answer + offset;
+      
+      // Asegurar que la opción sea positiva y única
+      if (option > 0 && !_answerOptions.contains(option)) {
+        _answerOptions.add(option);
+      }
+    }
+    
+    // Mezclar las opciones
+    _answerOptions.shuffle();
+    
+    setState(() {});
+  }
+
+  void _checkAnswerOption(int selectedAnswer) {
     _playSound('sounds/button_click.mp3');
-    int? userAnswer = int.tryParse(_answerController.text);
-    if (userAnswer != null && userAnswer == _answer) {
+    if (selectedAnswer == _answer) {
       _timer?.cancel();
       _endLevel(true); // Level completed
     } else {
@@ -534,34 +558,42 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 30),
-            TextField(
-              controller: _answerController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Tu respuesta',
-                labelStyle: const TextStyle(color: Colors.white70),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.cyanAccent),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.5)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-            HackerButton(
-              text: 'ENVIAR RESPUESTA',
-              icon: Icons.send,
-              onPressed: _checkAnswer,
-              playSound: false,
+            // Opciones de respuesta en lugar de TextField
+            Wrap(
+              spacing: 15,
+              runSpacing: 15,
+              alignment: WrapAlignment.center,
+              children: _answerOptions.map((option) {
+                return GestureDetector(
+                  onTap: () => _checkAnswerOption(option),
+                  child: Container(
+                    width: 120,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.7), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.cyanAccent.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        option.toString(),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.cyanAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
