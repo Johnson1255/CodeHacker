@@ -10,6 +10,7 @@ class HackerButton extends StatefulWidget {
   final bool playSound;
   final String soundAsset;
   final double width;
+  final Color color;
 
   const HackerButton({
     super.key,
@@ -21,6 +22,7 @@ class HackerButton extends StatefulWidget {
     this.playSound = true,
     this.soundAsset = 'sounds/button_click.mp3',
     this.width = double.infinity,
+    this.color = Colors.cyanAccent,
   });
 
   @override
@@ -124,16 +126,26 @@ class _HackerButtonState extends State<HackerButton> with SingleTickerProviderSt
       return Colors.transparent;
     }
     if (widget.isPrimary) {
-      return _isPressed ? Colors.cyanAccent.shade700 : Colors.cyanAccent;
+      if (widget.color == Colors.cyanAccent) {
+        return _isPressed ? Colors.cyanAccent.shade700 : Colors.cyanAccent;
+      } else if (widget.color == Colors.red) {
+        return _isPressed ? Colors.red.shade800 : Colors.red;
+      }
+      // Para otros colores que no tienen shade predefinido
+      return _isPressed ? widget.color.withOpacity(0.7) : widget.color;
     }
     return _isPressed ? Colors.blueGrey.shade800 : Colors.blueGrey.shade700;
   }
 
   Color _getTextColor() {
     if (widget.isOutlined) {
-      return Colors.cyanAccent;
+      return widget.color;
     }
     if (widget.isPrimary) {
+      // Para colores oscuros, texto blanco
+      if (widget.color == Colors.red || ThemeData.estimateBrightnessForColor(widget.color) == Brightness.dark) {
+        return Colors.white;
+      }
       return Colors.black;
     }
     return Colors.white;
@@ -142,7 +154,7 @@ class _HackerButtonState extends State<HackerButton> with SingleTickerProviderSt
   BoxBorder? _getBorder() {
     if (widget.isOutlined) {
       return Border.all(
-        color: Colors.cyanAccent,
+        color: widget.color,
         width: 2,
       );
     }
@@ -153,7 +165,7 @@ class _HackerButtonState extends State<HackerButton> with SingleTickerProviderSt
     if (widget.isOutlined) {
       return [
         BoxShadow(
-          color: Colors.cyanAccent.withOpacity(0.3),
+          color: widget.color.withOpacity(0.3),
           blurRadius: 8,
           spreadRadius: 1,
         ),
@@ -162,7 +174,7 @@ class _HackerButtonState extends State<HackerButton> with SingleTickerProviderSt
     if (widget.isPrimary) {
       return [
         BoxShadow(
-          color: Colors.cyanAccent.withOpacity(0.4),
+          color: widget.color.withOpacity(0.4),
           blurRadius: 8,
           spreadRadius: 1,
         ),

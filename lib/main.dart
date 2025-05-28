@@ -4,6 +4,7 @@ import 'package:code_hacker/screens/home.dart';
 import 'package:code_hacker/screens/game.dart';
 import 'package:code_hacker/screens/points.dart';
 import 'package:code_hacker/screens/credits.dart';
+import 'package:code_hacker/screens/nightmare.dart';
 
 void main() {
   runApp(const MyApp());
@@ -50,6 +51,7 @@ class MyApp extends StatelessWidget {
         '/game': (context) => const GameScreen(),
         '/points': (context) => const PointsScreen(),
         '/credits': (context) => const CreditsScreen(),
+        '/nightmare': (context) => const NightmareScreen(),
       },
     );
   }

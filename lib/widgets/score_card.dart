@@ -5,6 +5,7 @@ class ScoreCard extends StatelessWidget {
   final String label;
   final bool isHighScore;
   final IconData? icon;
+  final Color color;
 
   const ScoreCard({
     super.key,
@@ -12,6 +13,7 @@ class ScoreCard extends StatelessWidget {
     required this.label,
     this.isHighScore = false,
     this.icon,
+    this.color = Colors.cyanAccent,
   });
 
   @override
@@ -23,13 +25,13 @@ class ScoreCard extends StatelessWidget {
         color: isHighScore ? Colors.blueGrey.shade900 : Colors.black54,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isHighScore ? Colors.cyanAccent : Colors.blueGrey,
+          color: isHighScore ? color : Colors.blueGrey,
           width: 2,
         ),
         boxShadow: isHighScore
             ? [
                 BoxShadow(
-                  color: Colors.cyanAccent.withOpacity(0.3),
+                  color: color.withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -41,7 +43,7 @@ class ScoreCard extends StatelessWidget {
           if (icon != null) ...[
             Icon(
               icon,
-              color: isHighScore ? Colors.cyanAccent : Colors.white70,
+              color: isHighScore ? color : Colors.white70,
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -53,7 +55,7 @@ class ScoreCard extends StatelessWidget {
                 Text(
                   label.toUpperCase(),
                   style: TextStyle(
-                    color: isHighScore ? Colors.cyanAccent : Colors.white70,
+                    color: isHighScore ? color : Colors.white70,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.0,
@@ -63,7 +65,7 @@ class ScoreCard extends StatelessWidget {
                 Text(
                   score.toString(),
                   style: TextStyle(
-                    color: isHighScore ? Colors.cyanAccent : Colors.white,
+                    color: isHighScore ? color : Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -72,9 +74,9 @@ class ScoreCard extends StatelessWidget {
             ),
           ),
           if (isHighScore)
-            const Icon(
+            Icon(
               Icons.star,
-              color: Colors.cyanAccent,
+              color: color,
               size: 24,
             ),
         ],

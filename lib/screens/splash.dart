@@ -68,7 +68,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black,
         title: const Text(
-          '¡MODO HACKER ACTIVADO!',
+          '¡MODO BLACK HAT ACTIVADO!',
           style: TextStyle(color: Colors.red),
           textAlign: TextAlign.center,
         ),
@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             Icon(Icons.warning_amber_rounded, color: Colors.red, size: 50),
             SizedBox(height: 10),
             Text(
-              'Has descubierto el modo secreto.\nEstas Preparado?.',
+              'Has descubierto el modo secreto.\n¿Tienes lo que se necesita para hackear como un Black Hat?',
               style: TextStyle(color: Colors.white),
               textAlign: TextAlign.center,
             ),
@@ -88,9 +88,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
+              Navigator.pushReplacementNamed(context, '/nightmare');
+            },
+            child: const Text('ACEPTAR DESAFÍO', style: TextStyle(color: Colors.red)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
               Navigator.pushReplacementNamed(context, '/home');
             },
-            child: const Text('CONTINUAR', style: TextStyle(color: Colors.cyanAccent)),
+            child: const Text('DEMASIADO PELIGROSO', style: TextStyle(color: Colors.cyanAccent)),
           ),
         ],
       ),
