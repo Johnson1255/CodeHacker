@@ -53,6 +53,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Password Hack Mini-game variables
   String _targetPassword = '';
   List<String> _selectedCharacters = [];
+  List<bool> _correctCharacters = []; // Para indicar qué caracteres son correctos
   int _passwordLength = 4; // Longitud inicial de la contraseña
   final List<String> _availableCharacters = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -370,6 +371,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _passwordLength = 4 + (_currentCycle - 1);
     _generateTargetPassword();
     _selectedCharacters = List.filled(_passwordLength, '');
+    _correctCharacters = List.filled(_passwordLength, false); // Inicializar todos como incorrectos
   }
   
   void _generateTargetPassword() {
@@ -385,6 +387,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
   
   void _handleCharacterSelection(int position, String character) {
+    // No permitir cambiar caracteres que ya están correctos
+    if (_correctCharacters[position]) {
+      return;
+    }
+    
     _playSound('sounds/button_click.mp3');
     
     setState(() {
@@ -405,18 +412,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _timer?.cancel();
       _endLevel(true); // Level completed
     } else {
-      // Dar retroalimentación visual sobre qué caracteres son correctos
-      List<bool> correctPositions = List.generate(_passwordLength, (index) => 
-        index < _targetPassword.length && 
-        index < attemptedPassword.length && 
-        _targetPassword[index] == attemptedPassword[index]
-      );
+      // Actualizar qué caracteres son correctos
+      List<String> tempSelectedCharacters = List.from(_selectedCharacters);
       
-      // Mostrar cuántos caracteres están en posición correcta
-      int correctCount = correctPositions.where((isCorrect) => isCorrect).length;
+      for (int i = 0; i < _passwordLength; i++) {
+        if (i < _targetPassword.length && 
+            i < attemptedPassword.length && 
+            _targetPassword[i] == attemptedPassword[i]) {
+          _correctCharacters[i] = true;
+        }
+      }
+      
+      // Mantener los caracteres correctos, limpiar los incorrectos
+      List<String> newSelectedChars = List.filled(_passwordLength, '');
+      for (int i = 0; i < _passwordLength; i++) {
+        if (_correctCharacters[i]) {
+          newSelectedChars[i] = _targetPassword[i];
+        }
+      }
+      
+      // Contar cuántos caracteres son correctos
+      int correctCount = _correctCharacters.where((isCorrect) => isCorrect).length;
       
       setState(() {
-        _selectedCharacters = List.filled(_passwordLength, '');
+        _selectedCharacters = newSelectedChars;
       });
       
       // Mostrar pistas visuales brevemente
@@ -760,17 +779,33 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         height: 50,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black87,
+                          color: _correctCharacters[index] ? Colors.green.shade900 : Colors.black87,
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: Colors.cyanAccent.withOpacity(0.7)),
+                          border: Border.all(
+                            color: _correctCharacters[index] 
+                                ? Colors.green 
+                                : Colors.cyanAccent.withOpacity(0.7),
+                            width: _correctCharacters[index] ? 2 : 1,
+                          ),
+                          boxShadow: _correctCharacters[index] 
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  )
+                                ] 
+                              : null,
                         ),
                         child: Center(
                           child: Text(
                             _selectedCharacters[index],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors.cyanAccent,
+                              color: _correctCharacters[index] 
+                                  ? Colors.green.shade300 
+                                  : Colors.cyanAccent,
                             ),
                           ),
                         ),
@@ -830,7 +865,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             GestureDetector(
               onTap: () {
                 setState(() {
-                  _selectedCharacters = List.filled(_passwordLength, '');
+                  // Crear una nueva lista manteniendo los caracteres correctos
+                  List<String> newSelectedChars = List.filled(_passwordLength, '');
+                  for (int i = 0; i < _passwordLength; i++) {
+                    if (_correctCharacters[i]) {
+                      newSelectedChars[i] = _targetPassword[i];
+                    }
+                  }
+                  _selectedCharacters = newSelectedChars;
                 });
               },
               child: Container(
