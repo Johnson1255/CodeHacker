@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:code_hacker/widgets/custom_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CreditsScreen extends StatelessWidget {
   const CreditsScreen({super.key});
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se pudo abrir $urlString');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +66,7 @@ class CreditsScreen extends StatelessWidget {
                 _buildCreditItem(
                   icon: Icons.person,
                   title: 'DESARROLLADO POR',
-                  description: 'Senlin',
+                  description: 'Senlin (Johnson1255)',
                 ),
                 _buildCreditItem(
                   icon: Icons.code,
@@ -69,6 +77,20 @@ class CreditsScreen extends StatelessWidget {
                   icon: Icons.music_note,
                   title: 'EFECTOS DE SONIDO',
                   description: 'Hanifi Şahin, Universfield, u_8g40a9z0la (Pixabay)',
+                ),
+                _buildCreditItem(
+                  icon: Icons.code_rounded,
+                  title: 'GITHUB',
+                  description: '@Johnson1255 (a.k.a. Senlin)',
+                  isLink: true,
+                  url: 'https://github.com/Johnson1255',
+                ),
+                _buildCreditItem(
+                  icon: Icons.integration_instructions,
+                  title: 'REPOSITORIO',
+                  description: 'github.com/Johnson1255/CodeHacker',
+                  isLink: true,
+                  url: 'https://github.com/Johnson1255/CodeHacker',
                 ),
                 const Spacer(),
                 const Center(
@@ -112,6 +134,8 @@ class CreditsScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required String description,
+    bool isLink = false,
+    String? url,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -139,13 +163,40 @@ class CreditsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
+                isLink
+                    ? GestureDetector(
+                        onTap: () {
+                          if (url != null) {
+                            _launchURL(url);
+                          }
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              description,
+                              style: const TextStyle(
+                                color: Colors.cyanAccent,
+                                fontSize: 16,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.open_in_new,
+                              color: Colors.cyanAccent,
+                              size: 14,
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        description,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
               ],
             ),
           ),
