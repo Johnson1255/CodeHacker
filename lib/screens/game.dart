@@ -108,7 +108,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _timer?.cancel(); // Cancel any existing timer
     
     // Ajustar tiempo según el ciclo (más difícil con cada ciclo)
-    _timeLeft = max(5, 10 - (_currentCycle - 1)); // Mínimo 5 segundos
+    if (_currentLevel == 4) {
+      // Más tiempo para el nivel de contraseña: 90 segundos en ciclo 1, reduciendo gradualmente
+      _timeLeft = max(60, 90 - ((_currentCycle - 1) * 5)); // Mínimo 60 segundos
+    } else {
+      _timeLeft = max(5, 10 - (_currentCycle - 1)); // Mínimo 5 segundos para otros niveles
+    }
     
     if (_currentLevel == 1) {
       _startFirewallBreak();
@@ -182,7 +187,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     setState(() {
       _isDisplayingSequence = false;
       // Reiniciar el tiempo al valor completo después de mostrar la secuencia
-      _timeLeft = max(5, 10 - (_currentCycle - 1));
+      if (_currentLevel == 4) {
+        // Mantener el tiempo especial para el nivel 4
+        _timeLeft = max(60, 90 - ((_currentCycle - 1) * 5));
+      } else {
+        // Para otros niveles, usar el tiempo original
+        _timeLeft = max(5, 10 - (_currentCycle - 1));
+      }
     });
     
     await Future.delayed(const Duration(milliseconds: 500)); // Reduced delay
@@ -310,10 +321,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (_timeLeft > 0) {
         setState(() {
           _timeLeft--;
-          if (_timeLeft <= 3) {
-            _timeAnimationController.forward().then((_) {
-              _timeAnimationController.reverse();
-            });
+          // Ajustar la animación de alerta según el nivel
+          if (_currentLevel == 4) {
+            // Para el nivel 4, mostrar la animación cuando queden 10 segundos o menos
+            if (_timeLeft <= 10) {
+              _timeAnimationController.forward().then((_) {
+                _timeAnimationController.reverse();
+              });
+            }
+          } else {
+            // Para otros niveles, mantener el comportamiento original (3 segundos)
+            if (_timeLeft <= 3) {
+              _timeAnimationController.forward().then((_) {
+                _timeAnimationController.reverse();
+              });
+            }
           }
         });
       } else {
@@ -940,10 +962,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(5),
                             child: LinearProgressIndicator(
-                              value: _timeLeft / 10,
+                              value: _currentLevel == 4 
+                                  ? _timeLeft / (max(60, 90 - ((_currentCycle - 1) * 5))) // Para nivel 4, usar el valor máximo correcto
+                                  : _timeLeft / 10, // Para otros niveles, usar 10 como máximo
                               backgroundColor: Colors.blueGrey.shade800,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                                _currentLevel == 4
+                                    ? (_timeLeft <= 10 ? Colors.red : Colors.cyanAccent)
+                                    : (_timeLeft <= 3 ? Colors.red : Colors.cyanAccent),
                               ),
                             ),
                           ),
@@ -952,18 +978,26 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         ScaleTransition(
                           scale: _timeAnimation,
                           child: Container(
-                            width: 30,
+                            width: _currentLevel == 4 ? 60 : 30,
                             height: 30,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _timeLeft <= 3 ? Colors.red : Colors.cyanAccent,
+                              shape: _currentLevel == 4 ? BoxShape.rectangle : BoxShape.circle,
+                              borderRadius: _currentLevel == 4 ? BorderRadius.circular(15) : null,
+                              color: _currentLevel == 4 
+                                  ? (_timeLeft <= 10 ? Colors.red : Colors.cyanAccent)
+                                  : (_timeLeft <= 3 ? Colors.red : Colors.cyanAccent),
                             ),
                             child: Center(
                               child: Text(
-                                '$_timeLeft',
+                                _currentLevel == 4 && _timeLeft > 60
+                                    ? '${_timeLeft ~/ 60}:${(_timeLeft % 60).toString().padLeft(2, '0')}'
+                                    : '$_timeLeft',
                                 style: TextStyle(
-                                  color: _timeLeft <= 3 ? Colors.white : Colors.black,
+                                  color: _currentLevel == 4 
+                                      ? (_timeLeft <= 10 ? Colors.white : Colors.black)
+                                      : (_timeLeft <= 3 ? Colors.white : Colors.black),
                                   fontWeight: FontWeight.bold,
+                                  fontSize: _currentLevel == 4 ? 12 : 14,
                                 ),
                               ),
                             ),
