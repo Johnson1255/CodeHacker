@@ -54,6 +54,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   String _targetPassword = '';
   List<String> _selectedCharacters = [];
   List<bool> _correctCharacters = []; // Para indicar qué caracteres son correctos
+  String _lastTappedChar = ''; // Para rastrear el último carácter seleccionado
+  int _lastSelectedPosition = -1; // Para rastrear la última posición seleccionada
+  bool _isVerifyingPassword = false; // Para indicar cuando se está verificando la contraseña
   int _passwordLength = 4; // Longitud inicial de la contraseña
   final List<String> _availableCharacters = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -396,60 +399,100 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     
     setState(() {
       _selectedCharacters[position] = character;
+      _lastTappedChar = character; // Guardar el último carácter seleccionado
+      _lastSelectedPosition = position; // Guardar la última posición seleccionada
+    });
+    
+    // Limpiar el último carácter seleccionado después de un tiempo
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        setState(() {
+          _lastTappedChar = '';
+        });
+      }
+    });
+
+    // Limpiar la última posición seleccionada después de un tiempo
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _lastSelectedPosition = -1;
+        });
+      }
     });
     
     // Verificar si se ha completado la contraseña
     bool isComplete = !_selectedCharacters.contains('');
     if (isComplete) {
-      _checkPassword();
+      // Añadir un pequeño retraso para que el usuario vea el último carácter
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _checkPassword();
+        }
+      });
     }
   }
   
   void _checkPassword() {
     String attemptedPassword = _selectedCharacters.join();
     
-    if (attemptedPassword == _targetPassword) {
-      _timer?.cancel();
-      _endLevel(true); // Level completed
-    } else {
-      // Actualizar qué caracteres son correctos
-      List<String> tempSelectedCharacters = List.from(_selectedCharacters);
+    // Primero, mostrar un efecto visual en toda la contraseña
+    setState(() {
+      _isVerifyingPassword = true; // Indicar que estamos verificando
+    });
+    
+    // Verificar la contraseña después de un breve retraso
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       
-      for (int i = 0; i < _passwordLength; i++) {
-        if (i < _targetPassword.length && 
-            i < attemptedPassword.length && 
-            _targetPassword[i] == attemptedPassword[i]) {
-          _correctCharacters[i] = true;
-        }
-      }
-      
-      // Mantener los caracteres correctos, limpiar los incorrectos
-      List<String> newSelectedChars = List.filled(_passwordLength, '');
-      for (int i = 0; i < _passwordLength; i++) {
-        if (_correctCharacters[i]) {
-          newSelectedChars[i] = _targetPassword[i];
-        }
-      }
-      
-      // Contar cuántos caracteres son correctos
-      int correctCount = _correctCharacters.where((isCorrect) => isCorrect).length;
-      
+      // Desactivar el estado de verificación
       setState(() {
-        _selectedCharacters = newSelectedChars;
+        _isVerifyingPassword = false;
       });
       
-      // Mostrar pistas visuales brevemente
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Contraseña incorrecta. $correctCount/${_passwordLength} caracteres correctos.',
-            style: TextStyle(color: Colors.white),
+      if (attemptedPassword == _targetPassword) {
+        _timer?.cancel();
+        _endLevel(true); // Level completed
+      } else {
+        // Actualizar qué caracteres son correctos
+        List<String> tempSelectedCharacters = List.from(_selectedCharacters);
+        
+        for (int i = 0; i < _passwordLength; i++) {
+          if (i < _targetPassword.length && 
+              i < attemptedPassword.length && 
+              _targetPassword[i] == attemptedPassword[i]) {
+            _correctCharacters[i] = true;
+          }
+        }
+        
+        // Mantener los caracteres correctos, limpiar los incorrectos
+        List<String> newSelectedChars = List.filled(_passwordLength, '');
+        for (int i = 0; i < _passwordLength; i++) {
+          if (_correctCharacters[i]) {
+            newSelectedChars[i] = _targetPassword[i];
+          }
+        }
+        
+        // Contar cuántos caracteres son correctos
+        int correctCount = _correctCharacters.where((isCorrect) => isCorrect).length;
+        
+        setState(() {
+          _selectedCharacters = newSelectedChars;
+        });
+        
+        // Mostrar pistas visuales brevemente
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Contraseña incorrecta. $correctCount/${_passwordLength} caracteres correctos.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red.shade900,
+            duration: Duration(seconds: 1),
           ),
-          backgroundColor: Colors.red.shade900,
-          duration: Duration(seconds: 1),
-        ),
-      );
-    }
+        );
+      }
+    });
   }
 
   void _endLevel(bool levelCompleted) {
@@ -774,23 +817,42 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(_passwordLength, (index) {
-                      return Container(
-                        width: 40,
-                        height: 50,
+                      // Determinar si esta celda es la última seleccionada o si estamos verificando
+                      bool isLastSelected = index == _lastSelectedPosition;
+                      bool hasChar = _selectedCharacters[index].isNotEmpty;
+
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: isLastSelected ? 45 : 40,
+                        height: isLastSelected ? 55 : 50,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: _correctCharacters[index] ? Colors.green.shade900 : Colors.black87,
+                          color: _isVerifyingPassword 
+                              ? Colors.orange.shade900
+                              : _correctCharacters[index]
+                                  ? Colors.green.shade900 
+                                  : isLastSelected && hasChar
+                                      ? Colors.blueGrey.shade700
+                                      : Colors.black87,
                           borderRadius: BorderRadius.circular(5),
                           border: Border.all(
-                            color: _correctCharacters[index] 
-                                ? Colors.green 
-                                : Colors.cyanAccent.withOpacity(0.7),
-                            width: _correctCharacters[index] ? 2 : 1,
+                            color: _isVerifyingPassword
+                                ? Colors.orange
+                                : _correctCharacters[index]
+                                    ? Colors.green
+                                    : isLastSelected && hasChar
+                                        ? Colors.cyanAccent
+                                        : Colors.cyanAccent.withOpacity(0.7),
+                            width: (isLastSelected && hasChar) || _correctCharacters[index] || _isVerifyingPassword ? 2 : 1,
                           ),
-                          boxShadow: _correctCharacters[index] 
+                          boxShadow: (isLastSelected && hasChar) || _correctCharacters[index] || _isVerifyingPassword
                               ? [
                                   BoxShadow(
-                                    color: Colors.green.withOpacity(0.3),
+                                    color: _isVerifyingPassword
+                                        ? Colors.orange.withOpacity(0.3)
+                                        : _correctCharacters[index]
+                                            ? Colors.green.withOpacity(0.3)
+                                            : Colors.cyanAccent.withOpacity(0.3),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   )
@@ -801,11 +863,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           child: Text(
                             _selectedCharacters[index],
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: isLastSelected ? 26 : 24,
                               fontWeight: FontWeight.bold,
-                              color: _correctCharacters[index] 
-                                  ? Colors.green.shade300 
-                                  : Colors.cyanAccent,
+                              color: _isVerifyingPassword
+                                  ? Colors.orange.shade300
+                                  : _correctCharacters[index] 
+                                      ? Colors.green.shade300 
+                                      : isLastSelected && hasChar
+                                          ? Colors.white
+                                          : Colors.cyanAccent,
                             ),
                           ),
                         ),
@@ -821,39 +887,46 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: _availableCharacters.map((char) {
+                // Verificar si este es el último carácter seleccionado
+                bool isLastTapped = char == _lastTappedChar;
+                
                 return GestureDetector(
                   onTap: () {
+                    // No permitir selecciones durante la verificación
+                    if (_isVerifyingPassword) return;
+                    
                     // Encontrar la primera posición vacía
                     int emptyPosition = _selectedCharacters.indexOf('');
                     if (emptyPosition != -1) {
                       _handleCharacterSelection(emptyPosition, char);
                     }
                   },
-                  child: Container(
-                    width: 40,
-                    height: 40,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: isLastTapped ? 45 : 40,
+                    height: isLastTapped ? 45 : 40,
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey.shade900,
+                      color: isLastTapped ? Colors.cyanAccent.withOpacity(0.3) : Colors.blueGrey.shade900,
                       borderRadius: BorderRadius.circular(5),
                       border: Border.all(
-                        color: Colors.cyanAccent.withOpacity(0.5),
-                        width: 1,
+                        color: isLastTapped ? Colors.cyanAccent : Colors.cyanAccent.withOpacity(0.5),
+                        width: isLastTapped ? 2 : 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 3,
-                          spreadRadius: 1,
+                          color: isLastTapped ? Colors.cyanAccent.withOpacity(0.5) : Colors.black26,
+                          blurRadius: isLastTapped ? 10 : 3,
+                          spreadRadius: isLastTapped ? 2 : 1,
                         ),
                       ],
                     ),
                     child: Center(
                       child: Text(
                         char,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: isLastTapped ? 20 : 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.cyanAccent,
+                          color: isLastTapped ? Colors.white : Colors.cyanAccent,
                         ),
                       ),
                     ),
@@ -864,6 +937,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             const SizedBox(height: 20),
             GestureDetector(
               onTap: () {
+                // No permitir reiniciar mientras se está verificando
+                if (_isVerifyingPassword) return;
+                
                 setState(() {
                   // Crear una nueva lista manteniendo los caracteres correctos
                   List<String> newSelectedChars = List.filled(_passwordLength, '');
@@ -873,24 +949,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     }
                   }
                   _selectedCharacters = newSelectedChars;
+                  _lastSelectedPosition = -1; // Resetear última posición seleccionada
                 });
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
+                  color: _isVerifyingPassword 
+                      ? Colors.grey.withOpacity(0.2) 
+                      : Colors.red.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.red.withOpacity(0.7)),
+                  border: Border.all(
+                    color: _isVerifyingPassword 
+                        ? Colors.grey.withOpacity(0.5) 
+                        : Colors.red.withOpacity(0.7),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh, color: Colors.red, size: 16),
+                    Icon(
+                      Icons.refresh, 
+                      color: _isVerifyingPassword ? Colors.grey : Colors.red, 
+                      size: 16,
+                    ),
                     SizedBox(width: 5),
                     Text(
                       'REINICIAR',
                       style: TextStyle(
-                        color: Colors.red,
+                        color: _isVerifyingPassword ? Colors.grey : Colors.red,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
