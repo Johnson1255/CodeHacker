@@ -882,57 +882,68 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 30),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
-              children: _availableCharacters.map((char) {
-                // Verificar si este es el último carácter seleccionado
-                bool isLastTapped = char == _lastTappedChar;
-                
-                return GestureDetector(
-                  onTap: () {
-                    // No permitir selecciones durante la verificación
-                    if (_isVerifyingPassword) return;
-                    
-                    // Encontrar la primera posición vacía
-                    int emptyPosition = _selectedCharacters.indexOf('');
-                    if (emptyPosition != -1) {
-                      _handleCharacterSelection(emptyPosition, char);
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: isLastTapped ? 45 : 40,
-                    height: isLastTapped ? 45 : 40,
-                    decoration: BoxDecoration(
-                      color: isLastTapped ? Colors.cyanAccent.withOpacity(0.3) : Colors.blueGrey.shade900,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: isLastTapped ? Colors.cyanAccent : Colors.cyanAccent.withOpacity(0.5),
-                        width: isLastTapped ? 2 : 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isLastTapped ? Colors.cyanAccent.withOpacity(0.5) : Colors.black26,
-                          blurRadius: isLastTapped ? 10 : 3,
-                          spreadRadius: isLastTapped ? 2 : 1,
+            Container(
+              width: double.infinity, // Ancho completo
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Wrap(
+                spacing: 6, // Reducir el espaciado horizontal
+                runSpacing: 6, // Reducir el espaciado vertical
+                alignment: WrapAlignment.center,
+                children: _availableCharacters.map((char) {
+                  // Verificar si este es el último carácter seleccionado
+                  bool isLastTapped = char == _lastTappedChar;
+                  
+                  return Container(
+                    // Contenedor exterior con tamaño fijo para reservar el espacio
+                    width: 50, // Un poco más grande que el tamaño máximo del botón
+                    height: 50, // Un poco más grande que el tamaño máximo del botón
+                    alignment: Alignment.center, // Centrar el contenido
+                    child: GestureDetector(
+                      onTap: () {
+                        // No permitir selecciones durante la verificación
+                        if (_isVerifyingPassword) return;
+                        
+                        // Encontrar la primera posición vacía
+                        int emptyPosition = _selectedCharacters.indexOf('');
+                        if (emptyPosition != -1) {
+                          _handleCharacterSelection(emptyPosition, char);
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        // Reducir ligeramente la diferencia de tamaño
+                        width: isLastTapped ? 44 : 40,
+                        height: isLastTapped ? 44 : 40,
+                        decoration: BoxDecoration(
+                          color: isLastTapped ? Colors.cyanAccent.withOpacity(0.3) : Colors.blueGrey.shade900,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: isLastTapped ? Colors.cyanAccent : Colors.cyanAccent.withOpacity(0.5),
+                            width: isLastTapped ? 2 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isLastTapped ? Colors.cyanAccent.withOpacity(0.5) : Colors.black26,
+                              blurRadius: isLastTapped ? 10 : 3,
+                              spreadRadius: isLastTapped ? 2 : 1,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        char,
-                        style: TextStyle(
-                          fontSize: isLastTapped ? 20 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: isLastTapped ? Colors.white : Colors.cyanAccent,
+                        child: Center(
+                          child: Text(
+                            char,
+                            style: TextStyle(
+                              fontSize: isLastTapped ? 20 : 18,
+                              fontWeight: FontWeight.bold,
+                              color: isLastTapped ? Colors.white : Colors.cyanAccent,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 20),
             GestureDetector(
