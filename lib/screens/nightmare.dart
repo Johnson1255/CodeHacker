@@ -149,6 +149,7 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
     _sequence = _generateSequence(_sequenceLength);
     _userInput = [];
     _colorPositions = [0, 1, 2, 3]; // Reiniciar posiciones
+    _shufflePositions = false; // Inicialmente no se barajan las posiciones
     _isDisplayingSequence = true;
     _displaySequence();
   }
@@ -161,11 +162,13 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
     _timer?.cancel();
     
     for (var color in _sequence) {
-      _highlightedColor = color;
-      setState(() {});
+      setState(() {
+        _highlightedColor = color;
+      });
       await Future.delayed(Duration(milliseconds: 400));
-      _highlightedColor = null;
-      setState(() {});
+      setState(() {
+        _highlightedColor = null;
+      });
       await Future.delayed(const Duration(milliseconds: 200));
     }
     
@@ -202,7 +205,7 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
       });
       
       // Mezclar las posiciones periódicamente para aumentar la dificultad
-      if (_shufflePositions && _random.nextInt(3) == 0) {
+      if (_shufflePositions && _random.nextInt(3) == 0 && _userInput.length < _sequence.length - 1) {
         setState(() {
           _colorPositions.shuffle();
         });
@@ -571,43 +574,38 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
             spacing: 15,
             runSpacing: 15,
             alignment: WrapAlignment.center,
-            children: _availableColors.asMap().entries.map((entry) {
-              int colorIndex = entry.key;
-              Color color = entry.value;
-              // Usar posición barajada para mayor dificultad
-              _colorPositions[colorIndex]; // Referencia para mantener la variable
+            children: List.generate(_availableColors.length, (index) {
+              // Usar las posiciones barajadas para determinar qué color mostrar en cada posición
+              int colorIndex = _colorPositions[index];
+              Color color = _availableColors[colorIndex];
               bool isHighlighted = color == _highlightedColor || color == _tappedColor;
               
-              return AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: GestureDetector(
-                  onTap: () => _handleColorTap(color),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isHighlighted ? Colors.white : Colors.transparent,
-                        width: 3,
-                      ),
-                      boxShadow: isHighlighted
-                          ? [
-                              BoxShadow(
-                                color: color.withOpacity(0.7),
-                                blurRadius: 12,
-                                spreadRadius: 2,
-                              ),
-                            ]
-                          : [],
+              return GestureDetector(
+                onTap: () => _handleColorTap(color),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isHighlighted ? Colors.white : Colors.transparent,
+                      width: 3,
                     ),
+                    boxShadow: isHighlighted
+                        ? [
+                            BoxShadow(
+                              color: color.withOpacity(0.7),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : [],
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ),
         ],
       );
