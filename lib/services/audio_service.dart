@@ -3,117 +3,158 @@ import 'package:audioplayers/audioplayers.dart';
 class AudioService {
   static final AudioService _instance = AudioService._internal();
   
-  // Un único reproductor para toda la aplicación
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
-  // Estado de la música
+  // Para música de fondo
+  final AudioPlayer _backgroundMusic = AudioPlayer();
+  final AudioPlayer _nightmareMusic = AudioPlayer();
   bool _isMusicPlaying = false;
   bool _isNightmareMusicPlaying = false;
-  
-  // Ruta del archivo de música actual
-  String? _currentMusicPath;
+
+  // Para efectos de sonido
+  final AudioPlayer _soundEffectPlayer = AudioPlayer();
 
   factory AudioService() {
     return _instance;
   }
 
   AudioService._internal() {
-    // Configurar el reproductor en modo de bucle para la música
-    _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    // Configuración inicial de los reproductores
+    _initializeAudioPlayers();
+  }
+  
+  // Método para inicializar todos los reproductores de audio
+  Future<void> _initializeAudioPlayers() async {
+    try {
+      // Configurar reproducción en bucle para música
+      await _backgroundMusic.setReleaseMode(ReleaseMode.loop);
+      await _nightmareMusic.setReleaseMode(ReleaseMode.loop);
+      
+      // Configurar reproducción única para efectos
+      await _soundEffectPlayer.setReleaseMode(ReleaseMode.release);
+      
+      // Establecer volumen
+      await _backgroundMusic.setVolume(1.0);
+      await _nightmareMusic.setVolume(1.0);
+      await _soundEffectPlayer.setVolume(0.8); // Volumen ligeramente más bajo para efectos
+    } catch (e) {
+      // Ignorar errores de inicialización
+    }
   }
 
-  // Método simplificado para reproducir música de fondo
   Future<void> playBackgroundMusic() async {
     if (!_isMusicPlaying) {
       try {
-        _currentMusicPath = 'sounds/denial-of-service-sci-fi-hacker-instrumental-267766.mp3';
-        await _audioPlayer.play(AssetSource(_currentMusicPath!));
+        // Detener cualquier música de pesadilla que esté sonando
+        if (_isNightmareMusicPlaying) {
+          _nightmareMusic.stop();
+          _isNightmareMusicPlaying = false;
+        }
+        
+        // Configurar el reproductor en modo de bucle
+        await _backgroundMusic.setReleaseMode(ReleaseMode.loop);
+        await _backgroundMusic.setVolume(1.0);
+        
+        // Reproducir la música
+        await _backgroundMusic.play(
+          AssetSource('sounds/denial-of-service-sci-fi-hacker-instrumental-267766.mp3'),
+          mode: PlayerMode.mediaPlayer,
+        );
+        
         _isMusicPlaying = true;
-        _isNightmareMusicPlaying = false;
       } catch (e) {
         _isMusicPlaying = false;
       }
     }
   }
 
-  // Método simplificado para reproducir música de pesadilla
   Future<void> playNightmareMusic() async {
-    try {
-      if (_currentMusicPath != 'sounds/cyberpunk-231946.mp3') {
-        await _audioPlayer.stop();
-        _currentMusicPath = 'sounds/cyberpunk-231946.mp3';
-        await _audioPlayer.play(AssetSource(_currentMusicPath!));
-      } else if (!_isNightmareMusicPlaying) {
-        await _audioPlayer.resume();
-      }
-      
-      _isNightmareMusicPlaying = true;
+    // Pausar la música normal si está reproduciéndose
+    if (_isMusicPlaying) {
+      await _backgroundMusic.stop();
       _isMusicPlaying = false;
-    } catch (e) {
-      _isNightmareMusicPlaying = false;
+    }
+    
+    if (!_isNightmareMusicPlaying) {
+      try {
+        // Configurar el reproductor en modo de bucle
+        await _nightmareMusic.setReleaseMode(ReleaseMode.loop);
+        await _nightmareMusic.setVolume(1.0);
+        
+        // Reproducir la música
+        await _nightmareMusic.play(
+          AssetSource('sounds/cyberpunk-231946.mp3'),
+          mode: PlayerMode.mediaPlayer,
+        );
+        
+        _isNightmareMusicPlaying = true;
+      } catch (e) {
+        _isNightmareMusicPlaying = false;
+      }
     }
   }
 
-  // Método simplificado para efectos de sonido - ahora no interrumpe la música
+  // Método simple para reproducir efectos de sonido
   Future<void> playSoundEffect(String soundAsset) async {
     try {
-      // Para efectos de sonido, simplemente reproducimos el sonido sin interrumpir la música
-      // Esto es una simulación simple, ya que estamos usando un solo reproductor
-      // En un juego profesional, usaríamos una biblioteca de mezcla de audio más avanzada
+      // Reproducir sin esperar a que termine
+      _soundEffectPlayer.play(AssetSource(soundAsset));
       
-      // Guardamos el volumen actual
-      double currentVolume = await _audioPlayer.volume;
-      
-      // Reducimos brevemente el volumen para "mezclar" los sonidos
-      await _audioPlayer.setVolume(currentVolume * 0.7);
-      
-      // Después de un breve momento, restauramos el volumen original
-      Future.delayed(Duration(milliseconds: 300), () async {
-        await _audioPlayer.setVolume(currentVolume);
-      });
+      // Asegurar que la música siga reproduciéndose
+      if (_isMusicPlaying) {
+        Future.delayed(Duration(milliseconds: 50), () {
+          _backgroundMusic.resume();
+        });
+      } else if (_isNightmareMusicPlaying) {
+        Future.delayed(Duration(milliseconds: 50), () {
+          _nightmareMusic.resume();
+        });
+      }
     } catch (e) {
-      // Manejo silencioso de errores
+      // Ignorar errores silenciosamente
     }
   }
 
   Future<void> stopNightmareMusic() async {
     if (_isNightmareMusicPlaying) {
-      await _audioPlayer.stop();
+      await _nightmareMusic.stop();
       _isNightmareMusicPlaying = false;
       
       // Reanudar música normal si estaba reproduciéndose antes
       if (_isMusicPlaying) {
-        await playBackgroundMusic();
+        await resumeBackgroundMusic();
       }
     }
   }
 
   Future<void> stopBackgroundMusic() async {
     if (_isMusicPlaying) {
-      await _audioPlayer.stop();
+      await _backgroundMusic.stop();
       _isMusicPlaying = false;
     }
   }
 
   Future<void> pauseBackgroundMusic() async {
     if (_isMusicPlaying) {
-      await _audioPlayer.pause();
+      await _backgroundMusic.pause();
     }
   }
 
   Future<void> resumeBackgroundMusic() async {
     if (_isMusicPlaying) {
-      await _audioPlayer.resume();
+      await _backgroundMusic.resume();
     } else {
       await playBackgroundMusic();
     }
   }
 
   Future<void> setVolume(double volume) async {
-    await _audioPlayer.setVolume(volume);
+    await _backgroundMusic.setVolume(volume);
+    await _nightmareMusic.setVolume(volume);
+    await _soundEffectPlayer.setVolume(volume);
   }
 
   void dispose() {
-    _audioPlayer.dispose();
+    _backgroundMusic.dispose();
+    _nightmareMusic.dispose();
+    _soundEffectPlayer.dispose();
   }
 } 
