@@ -80,8 +80,7 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
   
   // Función para reproducir sonido
   Future<void> _playSound(String soundAsset) async {
-    final player = AudioPlayer();
-    await player.play(AssetSource(soundAsset));
+    await AudioService().playSoundEffect(soundAsset);
   }
   
   void _startLevel() {
@@ -89,6 +88,11 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
     
     // Tiempo reducido para mayor dificultad
     _timeLeft = 15;
+    
+    // Asegurar que la música de pesadilla siga reproduciéndose
+    Future.delayed(const Duration(milliseconds: 100), () {
+      AudioService().playNightmareMusic();
+    });
     
     if (_currentLevel == 1) {
       _startElusiveButton();
@@ -347,6 +351,11 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
     _playSound(levelCompleted ? 'sounds/level_complete.mp3' : 'sounds/level_failed.mp3');
     _timer?.cancel();
     
+    // Asegurar que la música de pesadilla siga reproduciéndose
+    Future.delayed(const Duration(milliseconds: 500), () {
+      AudioService().playNightmareMusic();
+    });
+    
     if (levelCompleted) {
       // Puntuación más alta para el modo pesadilla
       int levelPoints = 200;
@@ -365,6 +374,12 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
     } else {
       // Game over - Nivel fallido
       _saveScore(_score);
+      
+      // Asegurar que la música siga reproduciéndose durante la transición
+      Future.delayed(const Duration(milliseconds: 300), () {
+        AudioService().playNightmareMusic();
+      });
+      
       Navigator.pushReplacementNamed(
         context, 
         '/points', 

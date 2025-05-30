@@ -86,6 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   text: 'INICIAR MISIÓN',
                   icon: Icons.play_arrow,
                   onPressed: () {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      AudioService().resumeBackgroundMusic();
+                    });
                     Navigator.pushNamed(context, '/game');
                   },
                 ),

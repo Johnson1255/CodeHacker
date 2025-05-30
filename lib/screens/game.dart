@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:code_hacker/services/audio_service.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -66,6 +67,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    
+    // Asegurar que la música continúe reproduciéndose
+    Future.delayed(const Duration(milliseconds: 100), () {
+      AudioService().resumeBackgroundMusic();
+    });
+    
     _timeAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -104,8 +111,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Function to play sound
   Future<void> _playSound(String soundAsset) async {
-    final player = AudioPlayer();
-    await player.play(AssetSource(soundAsset));
+    await AudioService().playSoundEffect(soundAsset);
   }
 
   void _startLevel() {
@@ -498,6 +504,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _endLevel(bool levelCompleted) {
     _playSound(levelCompleted ? 'sounds/level_complete.mp3' : 'sounds/level_failed.mp3');
     _timer?.cancel(); // Cancel any running timer
+    
+    // Asegurar que la música siga reproduciéndose
+    Future.delayed(const Duration(milliseconds: 500), () {
+      AudioService().resumeBackgroundMusic();
+    });
+    
     if (levelCompleted) {
       // Puntuación base por nivel + bonificación por ciclo
       int levelPoints = 100 * _currentCycle;
@@ -519,6 +531,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     } else {
       // Game over - Level failed
       _saveScore(_score); // Save the score
+      
+      // Asegurar que la música siga reproduciéndose durante la transición
+      Future.delayed(const Duration(milliseconds: 300), () {
+        AudioService().resumeBackgroundMusic();
+      });
+      
       Navigator.pushReplacementNamed(
         context, 
         '/points', 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:code_hacker/services/audio_service.dart';
 
 class HackerButton extends StatefulWidget {
   final String text;
@@ -55,8 +56,7 @@ class _HackerButtonState extends State<HackerButton> with SingleTickerProviderSt
 
   Future<void> _playSound() async {
     if (widget.playSound) {
-      final player = AudioPlayer();
-      await player.play(AssetSource(widget.soundAsset));
+      await AudioService().playSoundEffect(widget.soundAsset);
     }
   }
 

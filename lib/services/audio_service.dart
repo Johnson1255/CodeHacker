@@ -6,6 +6,9 @@ class AudioService {
   final AudioPlayer _nightmareMusic = AudioPlayer();
   bool _isMusicPlaying = false;
   bool _isNightmareMusicPlaying = false;
+  
+  // Añadir un AudioPlayer para efectos de sonido
+  final AudioPlayer _soundEffects = AudioPlayer();
 
   factory AudioService() {
     return _instance;
@@ -50,6 +53,35 @@ class AudioService {
     }
   }
 
+  // Nuevo método para reproducir efectos de sonido
+  Future<void> playSoundEffect(String soundAsset) async {
+    try {
+      // Usar volumen fijo para efectos de sonido
+      double effectVolume = 0.7;
+      
+      // Usar playerMode.lowLatency para efectos cortos
+      await _soundEffects.play(
+        AssetSource(soundAsset),
+        mode: PlayerMode.lowLatency,
+        volume: effectVolume,
+      );
+      
+      // Asegurar que el modo de liberación sea adecuado para efectos de sonido
+      await _soundEffects.setReleaseMode(ReleaseMode.release);
+      
+      // Si hay interrupción de la música, reanudarla
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (_isMusicPlaying) {
+          _backgroundMusic.resume();
+        } else if (_isNightmareMusicPlaying) {
+          _nightmareMusic.resume();
+        }
+      });
+    } catch (e) {
+      // Manejo silencioso de errores
+    }
+  }
+
   Future<void> stopNightmareMusic() async {
     if (_isNightmareMusicPlaying) {
       await _nightmareMusic.stop();
@@ -86,10 +118,12 @@ class AudioService {
   Future<void> setVolume(double volume) async {
     await _backgroundMusic.setVolume(volume);
     await _nightmareMusic.setVolume(volume);
+    await _soundEffects.setVolume(volume);
   }
 
   void dispose() {
     _backgroundMusic.dispose();
     _nightmareMusic.dispose();
+    _soundEffects.dispose();
   }
 } 

@@ -76,7 +76,7 @@ class CreditsScreen extends StatelessWidget {
                 _buildCreditItem(
                   icon: Icons.music_note,
                   title: 'MÚSICA',
-                  description: 'HygienikStudios y Luca Francini (Pixabay)',z
+                  description: 'HygienikStudios y Luca Francini (Pixabay)',
                 ),
                 _buildCreditItem(
                   icon: Icons.volume_up,
