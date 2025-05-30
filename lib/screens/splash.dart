@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:code_hacker/services/audio_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:code_hacker/widgets/custom_button.dart';
 import 'package:code_hacker/widgets/score_card.dart';
 import 'package:code_hacker/models/score_model.dart';
+import 'package:code_hacker/services/audio_service.dart';
 import 'dart:convert';
 
 class PointsScreen extends StatefulWidget {
@@ -34,6 +35,18 @@ class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderSt
     );
     _loadHighScore();
     _controller.forward();
+    
+    // Asegurarse de que si venimos de Nightmare, se restaure la música normal
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final scoreData = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? 
+        {'score': 0, 'cycle': 1, 'level': 1};
+      
+      final bool isNightmare = scoreData['nightmare'] as bool? ?? false;
+      if (isNightmare) {
+        // Restaurar la música principal
+        AudioService().stopNightmareMusic();
+      }
+    });
   }
 
   @override
@@ -337,10 +350,13 @@ class _PointsScreenState extends State<PointsScreen> with SingleTickerProviderSt
                   icon: Icons.replay,
                   color: _isNightmareMode ? Colors.red : Colors.cyanAccent,
                   onPressed: () {
-                    Navigator.pushReplacementNamed(
-                      context, 
-                      _isNightmareMode ? '/nightmare' : '/game'
-                    );
+                    if (_isNightmareMode) {
+                      // No es necesario detener la música de pesadilla aquí,
+                      // ya que la pantalla Nightmare la iniciará nuevamente
+                      Navigator.pushReplacementNamed(context, '/nightmare');
+                    } else {
+                      Navigator.pushReplacementNamed(context, '/game');
+                    }
                   },
                 ),
                 const SizedBox(height: 15),

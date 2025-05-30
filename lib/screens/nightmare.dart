@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:code_hacker/services/audio_service.dart';
 
 class NightmareScreen extends StatefulWidget {
   const NightmareScreen({super.key});
@@ -60,6 +61,9 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
       CurvedAnimation(parent: _timeAnimationController, curve: Curves.easeInOut),
     );
     
+    // Iniciar la música de Nightmare
+    AudioService().playNightmareMusic();
+    
     _startLevel();
   }
   
@@ -67,6 +71,10 @@ class _NightmareScreenState extends State<NightmareScreen> with TickerProviderSt
   void dispose() {
     _timer?.cancel();
     _timeAnimationController.dispose();
+    
+    // Detener la música de Nightmare al salir
+    AudioService().stopNightmareMusic();
+    
     super.dispose();
   }
   
