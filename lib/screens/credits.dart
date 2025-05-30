@@ -75,6 +75,11 @@ class CreditsScreen extends StatelessWidget {
                 ),
                 _buildCreditItem(
                   icon: Icons.music_note,
+                  title: 'MÚSICA',
+                  description: 'HygienikStudios y Luca Francini (Pixabay)',z
+                ),
+                _buildCreditItem(
+                  icon: Icons.volume_up,
                   title: 'EFECTOS DE SONIDO',
                   description: 'Hanifi Şahin, Universfield, u_8g40a9z0la (Pixabay)',
                 ),
